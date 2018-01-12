@@ -56,6 +56,8 @@ var _ = Describe("Types in EDN", func() {
 
 			testType := ElementType("foo")
 			Ω(testType.Name()).Should(BeEquivalentTo("foo"))
+			Ω(testType.IsCollection()).Should(BeEquivalentTo(false))
+
 		})
 	})
 })

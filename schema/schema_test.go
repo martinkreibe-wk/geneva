@@ -80,7 +80,6 @@ var _ = Describe("Schema building", func() {
 			Ω(edn).Should(ContainSubstring(":db.install/_attribute :db.part/db"))
 			Ω(edn).Should(ContainSubstring(":db/id #db/id [:db.part/db]"))
 			Ω(edn).Should(ContainSubstring(":db/ident :" + attrName))
-			Ω(edn).Should(ContainSubstring(":db/ident :" + attrName))
 			Ω(edn).Should(ContainSubstring(":db/valueType " + string(attrType)))
 			Ω(edn).Should(ContainSubstring(":db/cardinality " + string(attrCard)))
 			Ω(edn).Should(ContainSubstring(":db/doc \"" + attrDoc + "\""))

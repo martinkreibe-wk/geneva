@@ -11,7 +11,16 @@ const (
 
 	// ErrInvalidKeyword defines the error for invalid keywords
 	ErrInvalidKeyword = Error("Invalid keyword")
+
+	// ForwardDirection
+	ForwardDirection KeywordDirection = ""
+
+	// ReverseDirection
+	ReverseDirection KeywordDirection = "_"
 )
+
+// KeywordDirection
+type KeywordDirection string
 
 // init will add the element factory to the collection of factories
 func initKeyword() error {
@@ -33,9 +42,15 @@ func initKeyword() error {
 
 // If the target platform supports some notion of interning, it is a further semantic of keywords that all instances of
 // the same keyword yield the identical object.
+type KeywordElement interface {
+	SymbolElement
+
+	// SetDirection of the keyword
+	SetDirection(KeywordDirection)
+}
 
 // NewKeywordElement creates a new character element or an error.
-func NewKeywordElement(parts ...string) (elem SymbolElement, err error) {
+func NewKeywordElement(parts ...string) (elem KeywordElement, err error) {
 
 	// remove the : symbol if it is the first character.
 	switch len(parts) {
@@ -70,4 +85,9 @@ func NewKeywordElement(parts ...string) (elem SymbolElement, err error) {
 	}
 
 	return elem, err
+}
+
+// SetDirection of the keyword
+func (elem *symbolElemImpl) SetDirection(direction KeywordDirection) {
+	elem.direction = direction
 }

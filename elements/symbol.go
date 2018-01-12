@@ -48,6 +48,9 @@ type SymbolElement interface {
 	// Prefix to this symbol
 	Prefix() string
 
+	// Direction of the keyword
+	Direction() KeywordDirection
+
 	// Name to this symbol
 	Name() string
 }
@@ -55,9 +58,10 @@ type SymbolElement interface {
 // symbolElemImpl implements the symbolElemImpl
 type symbolElemImpl struct {
 	*baseElemImpl
-	prefix   string
-	name     string
-	modifier string
+	prefix    string
+	direction KeywordDirection
+	name      string
+	modifier  string
 }
 
 // NewSymbolElement creates a new character element or an error.
@@ -108,16 +112,17 @@ func NewSymbolElement(parts ...string) (elem SymbolElement, err error) {
 	if err == nil {
 
 		symElem := &symbolElemImpl{
-			prefix: prefix,
-			name:   name,
+			prefix:    prefix,
+			name:      name,
+			direction: ForwardDirection,
 		}
 
 		var base *baseElemImpl
 		if base, err = makeBaseElement(symElem, SymbolType, func(value interface{}) (out string, err error) {
-			if elem, ok := value.(*symbolElemImpl); ok {
+			if elem, ok := value.(SymbolElement); ok {
 				symbol := elem.Name()
 				if len(prefix) > 0 {
-					symbol = fmt.Sprintf("%s%s%s", elem.Prefix(), SymbolSeparator, symbol)
+					symbol = fmt.Sprintf("%s%s%s%s", elem.Prefix(), SymbolSeparator, elem.Direction(), symbol)
 				}
 
 				out = elem.Modifier() + symbol
@@ -171,4 +176,9 @@ func (elem *symbolElemImpl) Name() string {
 // Modifier for this symbol
 func (elem *symbolElemImpl) Modifier() string {
 	return elem.modifier
+}
+
+// Direction of the keyword
+func (elem *symbolElemImpl) Direction() KeywordDirection {
+	return elem.direction
 }

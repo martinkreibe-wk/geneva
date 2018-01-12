@@ -72,3 +72,8 @@ func (pairs *Pairs) Append(key, value Element) (err error) {
 func (pairs *Pairs) Raw() []Pair {
 	return pairs.data
 }
+
+// Len returns the pair collection length
+func (pairs *Pairs) Len() int {
+	return len(pairs.data)
+}

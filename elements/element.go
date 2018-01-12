@@ -19,14 +19,14 @@ const (
 // Element defines the interface for EDN elements.
 type Element interface {
 
+	// Serializer mixin
+	Serializer
+
 	// ElementType returns the current type of this element.
 	ElementType() ElementType
 
 	// Value of the element
 	Value() interface{}
-
-	// Serialize the element into a string or return the appropriate error.
-	Serialize() (composition string, err error)
 
 	// HasTag returns true if the element has a tag prefix
 	HasTag() bool

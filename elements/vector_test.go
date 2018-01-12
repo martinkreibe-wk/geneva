@@ -79,6 +79,21 @@ var _ = Describe("Vector in EDN", func() {
 			edn, err = group.Serialize()
 			Ω(err).Should(BeNil())
 			Ω(edn).Should(BeEquivalentTo("[\"foo\" \"bar\" \"faz\"]"))
+
+			var index, v Element
+			index, err = NewIntegerElement(0)
+			v, err = group.Get(index)
+			Ω(err).Should(BeNil())
+			Ω(v).ShouldNot(BeNil())
+
+			v, err = group.Get(0)
+			Ω(err).Should(BeNil())
+			Ω(v).ShouldNot(BeNil())
+
+			v, err = group.Get(&struct{}{})
+			Ω(err).ShouldNot(BeNil())
+			Ω(err).Should(BeEquivalentTo(ErrInvalidInput))
+			Ω(v).Should(BeNil())
 		})
 	})
 })

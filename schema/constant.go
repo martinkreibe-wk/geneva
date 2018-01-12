@@ -1,9 +1,12 @@
 package schema
 
+// ConstantPattern defines a pattern that consists of a constant
 type ConstantPattern string
 
 const (
-	// Wid
+
+	// WildcardPattern is the specification '*' that pulls all attributes of an entity, and recursively pulls any
+	// component attributes.
 	WildcardPattern = ConstantPattern("*")
 )
 

@@ -1,10 +1,8 @@
-package elements_test
+package elements
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	. "github.com/martinkreibe-wk/geneva/elements"
 )
 
 var _ = Describe("Map in EDN", func() {
@@ -65,6 +63,16 @@ var _ = Describe("Map in EDN", func() {
 			Ω(group).ShouldNot(BeNil())
 			Ω(group.ElementType()).Should(BeEquivalentTo(MapType))
 			Ω(group.Len()).Should(BeEquivalentTo(1))
+
+			var v Element
+			v, err = group.Get("foo")
+			Ω(err).Should(BeNil())
+			Ω(v).ShouldNot(BeNil())
+
+			v, err = group.Get("notfound")
+			Ω(err).ShouldNot(BeNil())
+			Ω(err).Should(BeEquivalentTo(ErrNoValue))
+			Ω(v).Should(BeNil())
 		})
 
 		It("should serialize a single nil entry in a map correctly", func() {
@@ -155,6 +163,51 @@ var _ = Describe("Map in EDN", func() {
 			})
 
 			Ω(err).Should(BeEquivalentTo(templateError))
+		})
+
+		It("should break the iteration and return the error", func() {
+
+			m, err := NewMap()
+			Ω(err).Should(BeNil())
+
+			var elem Element
+			elem, err = NewNilElement()
+			Ω(err).Should(BeNil())
+
+			err = m.Append(elem)
+			Ω(err).ShouldNot(BeNil())
+			Ω(err).Should(BeEquivalentTo(ErrInvalidInput))
+		})
+
+		It("should error if somehow the collection was not the type we were expecting.", func() {
+
+			m, err := NewMap()
+			Ω(err).Should(BeNil())
+
+			raw := m.(*collectionElemImpl)
+			raw.collection = &struct{}{} // overwrite the actual data.
+
+			var elem Element
+			elem, err = NewNilElement()
+			Ω(err).Should(BeNil())
+
+			err = m.Append(elem)
+			Ω(err).ShouldNot(BeNil())
+			Ω(err).Should(BeEquivalentTo(ErrInvalidElement))
+
+			_, err = m.Get("foo")
+			Ω(err).ShouldNot(BeNil())
+			Ω(err).Should(BeEquivalentTo(ErrInvalidElement))
+		})
+
+		It("should break the creation if there is an error", func() {
+
+			p, err := NewPair(":key1", nil)
+			Ω(err).ShouldNot(BeNil())
+
+			_, err = NewMap(p)
+			Ω(err).ShouldNot(BeNil())
+			Ω(err).Should(BeEquivalentTo(ErrInvalidPair))
 		})
 	})
 })

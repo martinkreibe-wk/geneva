@@ -1,5 +1,10 @@
 package elements
 
+import (
+	"fmt"
+	"strconv"
+)
+
 const (
 
 	// ErrNoValue is returned when no value is found in the collection.
@@ -125,24 +130,31 @@ func collectionSerialization(hasKey bool) func(value interface{}) (composition s
 // Append will add the appropriate children. Note that a map must have 2 parameters.
 func (elem *collectionElemImpl) Append(children ...Element) (err error) {
 
-	switch v := elem.collection.(type) {
-	case []Element:
-		elem.collection = append(v, children...)
-	case map[string]Element:
+	if len(children) != 0 {
+		switch v := elem.collection.(type) {
+		case []Element:
+			elem.collection = append(v, children...)
+		case map[string]Element:
 
-		if len(children)%2 == 0 {
-			for i := 0; i < len(children); i += 2 {
-				var k string
-				if k, err = children[i].Serialize(); err == nil {
-					v[k] = children[i+1]
+			if len(children)%2 == 0 {
+				for i := 0; i < len(children); i += 2 {
+					var k string
+					if str, is := children[i].(*baseElemImpl); is && str.elemType == StringType {
+						k = str.value.(string)
+					} else {
+						k, err = children[i].Serialize()
+					}
+					if err == nil {
+						v[k] = children[i+1]
+					}
 				}
+			} else {
+				err = ErrInvalidInput
 			}
-		} else {
-			err = ErrInvalidInput
-		}
 
-	default:
-		err = ErrInvalidElement
+		default:
+			err = ErrInvalidElement
+		}
 	}
 
 	return err
@@ -154,6 +166,8 @@ func (elem *collectionElemImpl) Get(key interface{}) (value Element, err error) 
 	var realKey string
 
 	switch k := key.(type) {
+	case int, int32, int64:
+		realKey = fmt.Sprintf("%d", k)
 	case string:
 		realKey = k
 	case Element:
@@ -165,7 +179,14 @@ func (elem *collectionElemImpl) Get(key interface{}) (value Element, err error) 
 	if err == nil {
 		switch v := elem.collection.(type) {
 		case []Element:
+			var index int
 			err = ErrNoValue
+			if index, err = strconv.Atoi(realKey); err == nil {
+				if index >= 0 && index < len(v) {
+					value = v[index]
+					err = nil
+				}
+			}
 		case map[string]Element:
 			var has bool
 			if value, has = v[realKey]; !has {

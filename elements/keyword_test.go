@@ -171,6 +171,11 @@ var _ = Describe("Keyword in EDN", func() {
 			edn, err := elem.Serialize()
 			Ω(err).Should(BeNil())
 			Ω(edn).Should(BeEquivalentTo(KeywordPrefix + prefix + SymbolSeparator + name))
+
+			elem.SetDirection(ReverseDirection)
+			edn, err = elem.Serialize()
+			Ω(err).Should(BeNil())
+			Ω(edn).Should(BeEquivalentTo(KeywordPrefix + prefix + SymbolSeparator + string(ReverseDirection) + name))
 		})
 
 		It("should serialize the keyword with one (but with the separator) parameter without an issue", func() {

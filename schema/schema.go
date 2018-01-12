@@ -6,15 +6,18 @@ import (
 
 const (
 	DbPartition = "db.part/db"
+
+	// InstallOperation defines the installation operation
+	InstallOperation = "db.install/_attribute"
 )
 
-// Schema
+// Schema defines an eva schema.
 type Schema interface {
+	elements.Serializer
+	elements.CollectionBuilder
+
+	// AddAttribute will add an attribute to the schema
 	AddAttribute(name string, elementType elements.ElementType, cardinality AttributeCardinality, doc ...string) (Attribute, error)
-
-	// AddAttributeWithId(id int, name string, elementType elements.ElementType, cardinality AttributeCardinality, doc ...string) (error)
-
-	Serialize() (string, error)
 }
 
 // schemaImpl implements the schema
@@ -27,24 +30,34 @@ type schemaImpl struct {
 	attributes []Attribute
 }
 
+// NewSchema will create a new schema
+func NewSchema(name string) (schema Schema, err error) {
+
+	// TODO: there may be restrictions on the names.
+	schema = &schemaImpl{
+		name: name,
+	}
+
+	return schema, err
+}
+
 // Serialize the element into a string or return the appropriate error.
-func (schema *schemaImpl) Serialize() (composition string, err error) {
+func (schema *schemaImpl) BuildCollection() (elem elements.CollectionElement, err error) {
 	var n elements.SymbolElement
 	if n, err = elements.NewSymbolElement(schema.name); err == nil {
 		var def elements.SymbolElement
 		if def, err = elements.NewSymbolElement("def"); err == nil {
 			var attrs elements.CollectionElement
 			if attrs, err = elements.NewVector(); err == nil {
-				var wrapper elements.CollectionElement
-				if wrapper, err = elements.NewGroup(def, n, attrs); err == nil {
+				if elem, err = elements.NewGroup(def, n, attrs); err == nil {
 
 					for _, attr := range schema.attributes {
 
 						var coll elements.CollectionElement
-						if coll, err = attr.asCollection(); err == nil {
+						if coll, err = attr.BuildCollection(); err == nil {
 
 							var kw elements.Element
-							if kw, err = elements.NewKeywordElement("db.install/_attribute"); err == nil {
+							if kw, err = elements.NewKeywordElement(InstallOperation); err == nil {
 
 								var val elements.Element
 								if val, err = elements.NewKeywordElement(DbPartition); err == nil {
@@ -52,20 +65,27 @@ func (schema *schemaImpl) Serialize() (composition string, err error) {
 								}
 							}
 
-							attrs.Append(coll)
+							err = attrs.Append(coll)
 						}
 
 						if err != nil {
 							break
 						}
 					}
-
-					if err == nil {
-						composition, err = wrapper.Serialize()
-					}
 				}
 			}
 		}
+	}
+
+	return elem, err
+}
+
+// BuildCollection this object into a collection of elements.
+func (schema *schemaImpl) Serialize() (composition string, err error) {
+
+	var elem elements.Element
+	if elem, err = schema.BuildCollection(); err == nil {
+		composition, err = elem.Serialize()
 	}
 
 	return composition, err
@@ -79,15 +99,4 @@ func (schema *schemaImpl) AddAttribute(name string, elementType elements.Element
 	}
 
 	return attr, err
-}
-
-// NewSchema will create a new schema
-func NewSchema(name string) (schema Schema, err error) {
-
-	// TODO: there may be restrictions on the names.
-	schema = &schemaImpl{
-		name: name,
-	}
-
-	return schema, err
 }

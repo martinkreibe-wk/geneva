@@ -21,52 +21,47 @@ const (
 // NewMap creates a new vector
 func NewMap(pairs ...Pair) (elem CollectionElement, err error) {
 
-	// check for errors
-	keys := []Element{}
-	children := map[Element]Element{}
-	for _, pair := range pairs {
-		if pair == nil || pair.Key() == nil {
-			err = ErrInvalidPair
-		} else {
-
-			key := pair.Key()
-			for _, k := range keys {
-
-				if key.Equals(k) {
-					err = ErrDuplicateKey
-					break
-				}
-			}
-
-			if err == nil {
-				keys = append(keys, key)
-				children[key] = pair.Value()
-			}
-		}
-
-		if err != nil {
-			break
-		}
+	coll := &collectionElemImpl{
+		startSymbol:             MapStartLiteral,
+		endSymbol:               MapEndLiteral,
+		separatorSymbol:         MapSeparatorLiteral,
+		keyValueSeparatorSymbol: MapKeyValueSeparatorLiteral,
+		collection:              map[string]Element{},
 	}
 
-	if err == nil {
-		coll := &collectionElemImpl{
-			startSymbol:             MapStartLiteral,
-			endSymbol:               MapEndLiteral,
-			separatorSymbol:         MapSeparatorLiteral,
-			keyValueSeparatorSymbol: MapKeyValueSeparatorLiteral,
-			collection:              map[string]Element{},
-		}
+	var base *baseElemImpl
+	if base, err = makeBaseElement(coll, MapType, collectionSerialization(true)); err == nil {
+		coll.baseElemImpl = base
 
-		var base *baseElemImpl
-		if base, err = makeBaseElement(coll, MapType, collectionSerialization(true)); err == nil {
-			coll.baseElemImpl = base
-			elem = coll
-			for key, value := range children {
-				if err = elem.Append(key, value); err != nil {
-					break
+		// check for errors
+		keys := []Element{}
+		for _, pair := range pairs {
+			if pair == nil || pair.Key() == nil {
+				err = ErrInvalidPair
+			} else {
+
+				key := pair.Key()
+				for _, k := range keys {
+
+					if key.Equals(k) {
+						err = ErrDuplicateKey
+						break
+					}
+				}
+
+				if err == nil {
+					keys = append(keys, key)
+					err = coll.Append(key, pair.Value())
 				}
 			}
+
+			if err != nil {
+				break
+			}
+		}
+
+		if err == nil {
+			elem = coll
 		}
 	}
 

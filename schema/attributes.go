@@ -4,6 +4,15 @@ import (
 	"github.com/martinkreibe-wk/geneva/elements"
 )
 
+const (
+
+	// IdTag is the database id.
+	IdTag = "db/id"
+
+	// UnsetId defines an id that is not set.
+	UnsetId = 0
+)
+
 // Each database has a schema that describes the set of attributes that can be associated with entities. A schema only
 // defines the characteristics of the attributes themselves. It does not define which attributes can be associated with
 // which entities. Decisions about which attributes apply to which entities are made by an application.
@@ -16,6 +25,8 @@ import (
 // e.g. :firstName, and a value type, e.g. :db.type/long, and a cardinality. The actual value of the attribute may have
 // a tag which stereotypes the value.
 type Attribute interface {
+	elements.Serializer
+	elements.CollectionBuilder
 
 	// Ident defines the attributes identity
 	Id() int64
@@ -31,9 +42,6 @@ type Attribute interface {
 
 	// Document associated with this attribute.
 	Document() string
-
-	// element returns the attribute as an element
-	asCollection() (elements.CollectionElement, error)
 }
 
 // AttributeIdent is the name of the attribute. `:db/ident` specifies the unique name of an attribute. It's value is a
@@ -49,9 +57,73 @@ type Attribute interface {
 
 // attrImpl defines the actual implementation for the attribute in eva.
 type attrImpl struct {
-	impl elements.CollectionElement
+	AttrId          int64
+	AttrName        string
+	AttrType        elements.ElementType
+	AttrCardinality AttributeCardinality
+	AttrDocument    string
 }
 
+// NewAttribute creates a new attribute pair.
+func NewAttribute(name string, elementType elements.ElementType, cardinality AttributeCardinality, doc ...string) (attr Attribute, err error) {
+	if len(doc) <= 1 {
+
+		var d string
+		if len(doc) == 1 {
+			d = doc[0]
+		}
+
+		attr = &attrImpl{
+			AttrId:          UnsetId,
+			AttrName:        name,
+			AttrType:        elementType,
+			AttrCardinality: cardinality,
+			AttrDocument:    d,
+		}
+	} else {
+		err = elements.ErrInvalidInput
+	}
+
+	return attr, err
+}
+
+// Serialize the element into a string or return the appropriate error.
+func (attr *attrImpl) Serialize() (composition string, err error) {
+
+	var elem elements.CollectionElement
+	if elem, err = attr.BuildCollection(); err == nil {
+		composition, err = elem.Serialize()
+	}
+
+	return composition, err
+}
+
+// Ident for this attribute
+func (attr *attrImpl) Id() (ident int64) {
+	return attr.AttrId
+}
+
+// Name for this attribute
+func (attr *attrImpl) Name() (name string) {
+	return attr.AttrName
+}
+
+// Type this attribute supports
+func (attr *attrImpl) Type() (elemType elements.ElementType) {
+	return attr.AttrType
+}
+
+// Cardinality of the attribute
+func (attr *attrImpl) Cardinality() (card AttributeCardinality) {
+	return attr.AttrCardinality
+}
+
+// Document of the attribute
+func (attr *attrImpl) Document() (doc string) {
+	return attr.AttrDocument
+}
+
+// appendPair will create a pair and push it onto the pair collection
 func appendPair(keySymbol string, value elements.Element, pairs *elements.Pairs, err error) error {
 	if err == nil {
 		var key elements.SymbolElement
@@ -63,10 +135,12 @@ func appendPair(keySymbol string, value elements.Element, pairs *elements.Pairs,
 	return err
 }
 
+// keywordCreator creates the keyword from a single string.
 func keywordCreator(in string) (elements.Element, error) {
 	return elements.NewKeywordElement(in)
 }
 
+// appendPairWithString will create a string pair.
 func appendPairWithString(keySymbol string, creator func(string) (elements.Element, error), value string, pairs *elements.Pairs, err error) error {
 	if err == nil {
 		var val elements.Element
@@ -77,103 +151,36 @@ func appendPairWithString(keySymbol string, creator func(string) (elements.Eleme
 	return err
 }
 
-func NewAttribute(name string, elementType elements.ElementType, cardinality AttributeCardinality, doc ...string) (attr Attribute, err error) {
-	if len(doc) <= 1 {
-		pairs := &elements.Pairs{}
+// BuildCollection will create an element collection.
+func (attr *attrImpl) BuildCollection() (elem elements.CollectionElement, err error) {
 
-		var part elements.SymbolElement
-		var id elements.CollectionElement
+	pairs := &elements.Pairs{}
+
+	var part elements.SymbolElement
+	var id elements.Element
+
+	if attr.AttrId == UnsetId {
 		if part, err = elements.NewKeywordElement(DbPartition); err == nil {
-			if id, err = elements.NewVector(part); err == nil {
-				err = id.SetTag("db/id")
-			}
-		}
-
-		err = appendPair(IdAttribute, id, pairs, err)
-		err = appendPairWithString(IdentAttribute, keywordCreator, name, pairs, err)
-		err = appendPairWithString(ValueTypeAttribute, keywordCreator, string(elementType), pairs, err)
-		err = appendPairWithString(CardinalityAttribute, keywordCreator, string(cardinality), pairs, err)
-		if len(doc) == 1 {
-			err = appendPairWithString(DocAttribute, elements.NewStringElement, doc[0], pairs, err)
-		}
-
-		if err == nil {
-			var impl elements.CollectionElement
-			if impl, err = elements.NewMap(pairs.Raw()...); err == nil {
-				attr = &attrImpl{
-					impl: impl,
-				}
-			}
+			id, err = elements.NewVector(part)
 		}
 	} else {
-		err = elements.ErrInvalidInput
+		id, err = elements.NewIntegerElement(attr.AttrId)
 	}
 
-	return attr, err
-}
-
-// asCollection returns the attribute as a collection
-func (attr *attrImpl) asCollection() (elements.CollectionElement, error) {
-	return attr.impl, nil
-}
-
-// Ident for this attribute
-func (attr *attrImpl) Id() (ident int64) {
-
-	// TODO: We dont have a clean error handling process here... Should we return an err?
-	if elem, err := attr.impl.Get(IdAttribute); err == nil {
-		ident, _ = elem.Value().(int64)
+	if err == nil {
+		err = id.SetTag(IdTag)
 	}
-	return ident
-}
-
-// Name for this attribute
-func (attr *attrImpl) Name() (name string) {
-	// TODO: We dont have a clean error handling process here... Should we return an err?
-	if elem, err := attr.impl.Get(IdentAttribute); err == nil {
-		v := elem.Value()
-		if raw, convert := v.(elements.SymbolElement); convert {
-			name = raw.Name()
-		}
-	} else {
-		panic(err)
+	err = appendPair(IdAttribute, id, pairs, err)
+	err = appendPairWithString(IdentAttribute, keywordCreator, attr.AttrName, pairs, err)
+	err = appendPairWithString(ValueTypeAttribute, keywordCreator, string(attr.AttrType), pairs, err)
+	err = appendPairWithString(CardinalityAttribute, keywordCreator, string(attr.AttrCardinality), pairs, err)
+	if len(attr.AttrDocument) > 0 {
+		err = appendPairWithString(DocAttribute, elements.NewStringElement, attr.AttrDocument, pairs, err)
 	}
-	return name
-}
 
-// Type this attribute supports
-func (attr *attrImpl) Type() (elemType elements.ElementType) {
-	// TODO: We dont have a clean error handling process here... Should we return an err?
-	if elem, err := attr.impl.Get(ValueTypeAttribute); err == nil {
-		v := elem.Value()
-		if raw, convert := v.(elements.SymbolElement); convert {
-			if v, e := raw.Serialize(); e == nil {
-				elemType = elements.ElementType(v)
-			}
-		}
+	if err == nil {
+		elem, err = elements.NewMap(pairs.Raw()...)
 	}
-	return elemType
-}
 
-// Cardinality of the attribute
-func (attr *attrImpl) Cardinality() (card AttributeCardinality) {
-	// TODO: We dont have a clean error handling process here... Should we return an err?
-	if elem, err := attr.impl.Get(CardinalityAttribute); err == nil {
-		v := elem.Value()
-		if raw, convert := v.(elements.SymbolElement); convert {
-			if v, e := raw.Serialize(); e == nil {
-				card = AttributeCardinality(v)
-			}
-		}
-	}
-	return card
-}
-
-// Document of the attribute
-func (attr *attrImpl) Document() (doc string) {
-	// TODO: We dont have a clean error handling process here... Should we return an err?
-	if elem, err := attr.impl.Get(DocAttribute); err == nil {
-		doc, _ = elem.Value().(string)
-	}
-	return doc
+	return elem, err
 }

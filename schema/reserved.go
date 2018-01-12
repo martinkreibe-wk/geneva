@@ -46,7 +46,6 @@ const (
 	// retained. Defaults to false.
 	NoHistoryAttribute = ReservedDbNamespace + elements.SymbolSeparator + "noHistory"
 
-	// TODO: Its own thing.
 	// TxInstantAttribute is the id given to a transaction. You can set :db/txInstant explicitly, overriding the
 	// transactor's clock time. When you do, you must choose a :db/txInstant value that is not older than any existing
 	// transaction, and not newer than the transactor's clock time. This capability enables initial imports of existing

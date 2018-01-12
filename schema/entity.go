@@ -11,21 +11,8 @@ package schema
 //   all other entities reachable as values V from E
 //   all other entities that can reach E through their values V
 type Entity interface {
-	//	Db() Database
 
-	Id() int
-	Value() interface{}
-	TransactionId() TransactionId
-
-	//	Get(ident AttributeIdent) (attr Attributes, err error)
-	//	GetAll() (idents map[AttributeIdent]Attribute, err error)
-
-	Set(attr ...Attribute) (err error)
+	// attributes
+	// value(s)
+	// other entities
 }
-
-// firstName = jane.get(":person/firstName")
-// id = jane.get(":db/id")
-// address = jane.get(":person/address")
-// peopleWhoLikeJane = jane.get(":person/_likes")
-
-type EntityId int64
